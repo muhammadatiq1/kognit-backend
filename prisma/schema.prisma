@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         String    @default("ENGINEER") // "PM" or "ENGINEER"
+  teamId       String?
+  team         Team?     @relation(fields: [teamId], references: [id])
+  tasksAuthored Task[]   @relation("Author")
+  tasksAssigned Task[]   @relation("Assignee")
+  comments     Comment[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([teamId])
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  members     User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Space {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isPrivate   Boolean  @default(false)
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Task {
+  id                 String    @id @default(uuid())
+  title              String
+  description        String
+  acceptanceCriteria String?
+  status             String    @default("BACKLOG") // BACKLOG, IN_PROGRESS, REVIEW, COMPLETED
+  priority           String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  
+  authorId           String
+  author             User      @relation("Author", fields: [authorId], references: [id])
+  
+  assigneeId         String?
+  assignee           User?     @relation("Assignee", fields: [assigneeId], references: [id])
+  
+  comments           Comment[]
+  tags               Tag[]
+  
+  startDate          DateTime?
+  dueDate            DateTime?
+  
+  spaceId            String?
+  space              Space?    @relation(fields: [spaceId], references: [id])
+  
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([authorId])
+  @@index([assigneeId])
+  @@index([spaceId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@index([authorId])
+}
+
+model Tag {
+  id    String @id @default(uuid())
+  name  String @unique
+  color String @default("#3b82f6")
+  tasks Task[]
+}
